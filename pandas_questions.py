@@ -15,12 +15,11 @@ import matplotlib.pyplot as plt
 
 def load_data():
     """Load data from the CSV files referundum/regions/departments."""
-    referendum = pd.read_csv('data/referendum.csv',sep=';')
+    referendum = pd.read_csv('data/referendum.csv', sep=';')
     regions = pd.read_csv('data/regions.csv')
     departments = pd.read_csv('data/departments.csv')
 
     return referendum, regions, departments
-
 
 
 def merge_regions_and_departments(regions, departments):
@@ -29,7 +28,12 @@ def merge_regions_and_departments(regions, departments):
     The columns in the final DataFrame should be:
     ['code_reg', 'name_reg', 'code_dep', 'name_dep']
     """
-    merged_df = pd.merge(regions, departments, left_on='code', right_on='region_code', how='inner')
+    merged_df = regions.merge(
+        departments,
+        left_on='code',
+        right_on='region_code',
+        how='inner'
+    )
     merged_df = merged_df.rename(columns={
         'code_x': 'code_reg',
         'name_x': 'name_reg',
@@ -52,11 +56,17 @@ def merge_referendum_and_areas(referendum, regions_and_departments):
     raf = regions_and_departments.copy()
 
     ref_code = ref["Department code"].astype(str).str.strip().str.upper()
-    ref_code = ref_code.where(~(ref_code.str.len() == 1) | ~ref_code.str.isdigit(), '0' + ref_code)
+    ref_code = ref_code.where(
+        ~(ref_code.str.len() == 1) | ~ref_code.str.isdigit(),
+        '0' + ref_code
+        )
     ref = ref.assign(code_dep_norm=ref_code)
 
     rad_code = raf['code_dep'].astype(str).str.strip().str.upper()
-    rad_code = rad_code.where(~(rad_code.str.len() == 1) | ~rad_code.str.isdigit(), '0' + rad_code)
+    rad_code = rad_code.where(
+        ~(rad_code.str.len() == 1) | ~rad_code.str.isdigit(),
+        '0' + rad_code
+        )
     rad = raf.assign(code_dep_norm=rad_code)
 
     merged = pd.merge(
@@ -73,8 +83,10 @@ def merge_referendum_and_areas(referendum, regions_and_departments):
         code_dep_clean.str.contains('Z', na=False)
     )
     merged = merged[~overseas_mask].copy()
-    
-    merged = merged.drop(columns=['code_dep_norm','code_dep_x'], errors='ignore')
+    merged = merged.drop(
+        columns=['code_dep_norm', 'code_dep_x'],
+        errors='ignore'
+        )
     merged = merged.rename(columns={'code_dep_y': 'code_dep'}, errors='ignore')
     return merged
 
@@ -97,7 +109,6 @@ def compute_referendum_result_by_regions(referendum_and_areas):
     return result_df
 
 
-
 def plot_referendum_map(referendum_result_by_regions):
     """Plot a map with the results from the referendum.
 
@@ -116,9 +127,17 @@ def plot_referendum_map(referendum_result_by_regions):
         how='inner'
     )
 
-    merged_geo_df['ratio'] = merged_geo_df['Choice A'] / (merged_geo_df['Choice A'] + merged_geo_df['Choice B'])
+    merged_geo_df['ratio'] = (
+        merged_geo_df['Choice A'] /
+        (merged_geo_df['Choice A'] + merged_geo_df['Choice B']).replace(0, 1)
+        ).fillna(0)
 
-    ax = merged_geo_df.plot(column='ratio', cmap='OrRd', legend=True, edgecolor='black')
+    ax = merged_geo_df.plot(
+        column='ratio',
+        cmap='OrRd',
+        legend=True,
+        edgecolor='black'
+        )
     ax.set_title("Referendum Results by Region (Choice A Ratio)")
 
     return merged_geo_df
@@ -140,4 +159,3 @@ if __name__ == "__main__":
 
     plot_referendum_map(referendum_results)
     plt.show()
-
